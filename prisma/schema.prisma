@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Candidate {
+  cnd_id               Int         @id @default(autoincrement())
+  cnd_name             String      @default("Default Candidate") @db.VarChar(50)
+  cnd_applied_position String      @db.VarChar(100)
+  cnd_experience       Int         @default(0)
+  resume_upload_status String      @default("Pending") @db.VarChar(50)
+  cnd_status           String      @default("Not Scheduled") @db.VarChar(50)
+  created_date         DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  created_by           Int         @default(0)
+  modified_date        DateTime?   @db.Date
+  modified_by          Int?
+  employee_id          Int         @default(0)
+  Employee             Employee    @relation(fields: [employee_id], references: [emp_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_EMP_ID")
+  Interview            Interview[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Employee {
+  emp_id               Int                    @id(map: "PK_EMP_ID") @default(autoincrement())
+  emp_name             String                 @db.VarChar(50)
+  emp_position         String                 @db.VarChar(50)
+  emp_username         String                 @unique(map: "UQ_USERNAME") @db.VarChar(50)
+  emp_password         String                 @db.VarChar(50)
+  emp_status           String                 @default("Idle") @db.VarChar(50)
+  emp_type             String                 @db.VarChar(50)
+  Candidate            Candidate[]
+  Evaluation           Evaluation[]
+  Interview_Assignment Interview_Assignment[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Evaluation {
+  eval_id           Int                 @id(map: "PK_EVAL_ID") @default(autoincrement())
+  total_avg_score   Decimal             @db.Decimal
+  eval_notes        String?             @db.VarChar(300)
+  interview_id      Int                 @default(0)
+  interviewer_id    Int                 @default(0)
+  Employee          Employee            @relation(fields: [interviewer_id], references: [emp_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_INTERVIEWER_ID")
+  Interview         Interview           @relation(fields: [interview_id], references: [int_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_INTERVIEW_ID")
+  Evaluation_Points Evaluation_Points[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Evaluation_Points {
+  evaluation_id            Int                      @default(0)
+  evalpt_id                Int                      @default(0)
+  evalpt_status            String                   @default("Not Scored") @db.VarChar(50)
+  evalpt_score             Decimal                  @db.Decimal
+  Evaluation               Evaluation               @relation(fields: [evaluation_id], references: [eval_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_EVAL_ID")
+  Evaluation_Points_Master Evaluation_Points_Master @relation(fields: [evalpt_id], references: [evalpt_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_EVAL_PT_ID")
+
+  @@id([evaluation_id, evalpt_id], map: "PK_EVAL_POINTS")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Evaluation_Points_Master {
+  evalpt_id           Int                 @id(map: "PK_POINT_ID") @default(autoincrement())
+  evalpt_type         String              @db.VarChar(50)
+  point               String              @db.VarChar(300)
+  position_id         Int                 @default(0)
+  Evaluation_Points   Evaluation_Points[]
+  Job_Position_Master Job_Position_Master @relation(fields: [position_id], references: [pos_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_POSITION_ID")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Interview {
+  int_id               Int                    @id(map: "PK_INTERVIEW_ID") @default(autoincrement())
+  int_type             String                 @db.VarChar(50)
+  int_date_time        DateTime               @db.Date
+  int_medium           String                 @db.VarChar(50)
+  int_status           String                 @default("Scheduled") @db.VarChar(50)
+  created_date         DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
+  created_by           Int                    @default(0)
+  modified_by          Int?
+  candidate_id         Int                    @default(0)
+  position_id          Int                    @default(0)
+  modified_date        DateTime?              @db.Date
+  Evaluation           Evaluation[]
+  Candidate            Candidate              @relation(fields: [candidate_id], references: [cnd_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_CANDIDATE_ID")
+  Job_Position_Master  Job_Position_Master    @relation(fields: [position_id], references: [pos_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_POSITION_ID")
+  Interview_Assignment Interview_Assignment[]
+}
+
+model Interview_Assignment {
+  inta_id        Int       @id(map: "PK_ASIGN_ID") @default(autoincrement())
+  created_date   DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  created_by     Int       @default(0)
+  modified_date  DateTime? @db.Date
+  modified_by    Int?
+  interviewer_id Int       @default(0)
+  interview_id   Int       @default(0)
+  Employee       Employee  @relation(fields: [interviewer_id], references: [emp_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_INTERVIEWER_ID")
+  Interview      Interview @relation(fields: [interview_id], references: [int_id], onDelete: SetDefault, onUpdate: NoAction, map: "FK_INTERVIEW_ID")
+}
+
+model Job_Position_Master {
+  pos_id                   Int                        @id @default(autoincrement())
+  pos_name                 String                     @db.VarChar(100)
+  pos_description          String                     @db.VarChar(300)
+  pos_salary               Decimal?                   @db.Decimal
+  pos_start_date           DateTime?                  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  Evaluation_Points_Master Evaluation_Points_Master[]
+  Interview                Interview[]
+}
